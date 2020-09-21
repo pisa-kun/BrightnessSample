@@ -2,51 +2,90 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Diagnostics;
 
 namespace BrightnessControll
 {
     class ConsoleApp
     {
+        [STAThread]
         static void Main(string[] args)
         {
-            Console.WriteLine("\"Escape\"で終了");
+            //Mutex名を決める（必ずアプリケーション固有の文字列に変更すること！）
+            string mutexName = Process.GetCurrentProcess().ProcessName;
+            //Mutexオブジェクトを作成する
+            System.Threading.Mutex mutex = new System.Threading.Mutex(false, mutexName);
 
-            var current = Environment.CurrentDirectory;
-            var log = Path.Combine(current, "brightness.log");
+            bool hasHandle = false;
 
-            if(File.Exists(log))
+            try
             {
-                File.Delete(log);
-            }
+                //ミューテックスの所有権を要求する
+                hasHandle = mutex.WaitOne(0, false);
 
-            Console.WriteLine($"output folder : {log}");
-
-            var n = new Brightness();
-            var nowBrightness = n.GetValue();
-
-            using (var f = File.Create(log))
-            {
-                while(true)
+                //ミューテックスを得られたか調べる
+                if (hasHandle == false)
                 {
-                    if (nowBrightness != n.GetValue())
+                    Console.WriteLine("多重起動できませんでした");
+                    // 起動済みプロセスをkill
+                    // A, A' の順で起動した場合、Process.GetProcessByName(A)->Array[]には
+                    // Array[0]にA、Array[1]にA'の情報が入っているので末尾からプロセスキルする
+                    for (var i = Process.GetProcessesByName(mutexName).Length - 1; i >= 0; i--)
                     {
-                        AddText(f, "[" + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + "] " + "Brightness " + n.GetValue() + "\n");
-                        Console.WriteLine("[" + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + "] " + "Brightness " + n.GetValue());
-                        nowBrightness = n.GetValue();
+                        Console.WriteLine(Process.GetProcessesByName(mutexName)[i].Id);
+                        Process.GetProcessesByName(mutexName)[i].Kill();
                     }
+                }
 
-                    // ブロックせずにキー入力受付
-                    if(Console.KeyAvailable)
+                // Main
+                Console.WriteLine("\"Escape\"で終了");
+
+                var current = Environment.CurrentDirectory;
+                var log = Path.Combine(current, "brightness.log");
+
+                if (File.Exists(log))
+                {
+                    File.Delete(log);
+                }
+
+                Console.WriteLine($"output folder : {log}");
+
+                var n = new Brightness();
+                var nowBrightness = n.GetValue();
+
+                using (var f = File.Create(log))
+                {
+                    while (true)
                     {
-                        var k = Console.ReadKey();
-                        if(k.Key.ToString() == "Escape")
+                        if (nowBrightness != n.GetValue())
                         {
-                            break;
+                            AddText(f, "[" + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + "] " + "Brightness " + n.GetValue() + "\n");
+                            Console.WriteLine("[" + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + "] " + "Brightness " + n.GetValue());
+                            nowBrightness = n.GetValue();
+                        }
+
+                        // ブロックせずにキー入力受付
+                        if (Console.KeyAvailable)
+                        {
+                            var k = Console.ReadKey();
+                            if (k.Key.ToString() == "Escape")
+                            {
+                                break;
+                            }
                         }
                     }
                 }
             }
-                       
+            finally
+            {
+                if (hasHandle)
+                {
+                    //ミューテックスを解放する
+                    mutex.ReleaseMutex();
+                }
+                mutex.Close();
+            }
+
         }
 
         private static void AddText(FileStream fs, string value)
