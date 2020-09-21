@@ -14,6 +14,8 @@ namespace WinApp.ViewModels
 
         private FileStream f;
 
+        private System.Timers.Timer timersTimer;
+
         private int _BrightValue;
         /// <summary>
         /// two way
@@ -23,8 +25,7 @@ namespace WinApp.ViewModels
             get => _BrightValue;
             set
             {
-                AddText(f, "[" + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + "] " + "Brightness " + bright.GetValue() + "\n");
-
+                AddText(f, "[" + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + "] " + "Brightness " + BrightValue + "\n");
                 bright.SetValue(value);
                 this.SetProperty(ref _BrightValue, value);
             }                  
@@ -44,6 +45,14 @@ namespace WinApp.ViewModels
             dialog.ShowDialog();
         });
 
+        /// <summary>
+        /// 
+        /// </summary>
+        ~ViewModels()
+        {
+            f.Close();
+        }
+
         public ViewModels()
         {
             var current = Environment.CurrentDirectory;
@@ -57,6 +66,19 @@ namespace WinApp.ViewModels
 
             bright = new Brightness();
             BrightValue = bright.GetValue();
+
+            // 100msおきに明るさが外部から更新されていないか確認
+            timersTimer = new System.Timers.Timer(100);
+            timersTimer.Elapsed += (s, e) =>
+            {
+                if(BrightValue != bright.GetValue())
+                {
+                    BrightValue = bright.GetValue();
+                    AddText(f, "[" + DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss") + "] " + "Brightness " + BrightValue + "\n");
+                }
+            };
+            timersTimer.AutoReset = true;
+            timersTimer.Enabled = true;
         }
 
         private static void AddText(FileStream fs, string value)

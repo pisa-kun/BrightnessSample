@@ -9,11 +9,10 @@
         ResizeMode="NoResize"
 
         Title="MainWindow" Height="200" Width="300">
-    <Grid>
+    <Grid Background="{x:Static SystemParameters.WindowGlassBrush}">
         <StackPanel>
             <TextBlock Text="{Binding BrightValue, StringFormat=now Bright {0} }" HorizontalAlignment="Center"/>
-            <Slider Width="200" Minimum="0" Maximum="100" Value="{Binding BrightValue, Mode=TwoWay}" 
-                    Background="{DynamicResource {x:Static SystemColors.ActiveCaptionBrushKey}}"/>
+            <Slider Width="200" Minimum="0" Maximum="100" Value="{Binding BrightValue, Mode=TwoWay}" />
             <Button Height="30" Width="100" Content="Open Log" Command="{Binding OpenCommand}" />
         </StackPanel>
     </Grid>
