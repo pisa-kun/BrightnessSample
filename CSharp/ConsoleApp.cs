@@ -27,13 +27,17 @@ namespace BrightnessControll
                 if (hasHandle == false)
                 {
                     Console.WriteLine("多重起動できませんでした");
-                    // 起動済みプロセスをkill
-                    // A, A' の順で起動した場合、Process.GetProcessByName(A)->Array[]には
-                    // Array[0]にA、Array[1]にA'の情報が入っているので末尾からプロセスキルする
-                    for (var i = Process.GetProcessesByName(mutexName).Length - 1; i >= 0; i--)
+                    var now_id = Process.GetCurrentProcess().Id;
+                    if(now_id == Process.GetProcessesByName(mutexName)[0].Id)
                     {
-                        Console.WriteLine(Process.GetProcessesByName(mutexName)[i].Id);
-                        Process.GetProcessesByName(mutexName)[i].Kill();
+                        // first other kill,
+                        Process.GetProcessesByName(mutexName)[1].Kill();
+                        Process.GetProcessesByName(mutexName)[0].Kill();
+                    }
+                    else
+                    {
+                        Process.GetProcessesByName(mutexName)[0].Kill();
+                        Process.GetProcessesByName(mutexName)[1].Kill();
                     }
                 }
 
